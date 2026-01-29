@@ -3,161 +3,189 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Shared Staff Calendar</title>
+<title>Yearly Staff Calendar</title>
 
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#1976d2">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+<!-- Firebase -->
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
 
 <style>
-body{font-family:Arial;background:#f5f7fa;padding:20px}
-h1{text-align:center}
-
-.login,.controls{
- max-width:420px;
- margin:10px auto;
- background:#fff;
- padding:12px;
- border-radius:8px
+body { font-family: Arial, sans-serif; background:#f5f7fa; margin:0; padding:10px; }
+h1 { text-align:center; }
+.controls { max-width:520px; margin:auto; display:grid; gap:10px; }
+select, button { padding:10px; font-size:16px; }
+.calendar { display:grid; grid-template-columns:repeat(auto-fit,minmax(320px,1fr)); gap:12px; }
+.month { background:#fff; padding:8px; border-radius:8px; }
+.month h2 { text-align:center; margin:5px 0; }
+.weekdays, .days { display:grid; grid-template-columns:repeat(7,1fr); text-align:center; }
+.weekdays div { font-weight:bold; font-size:12px; }
+.day {
+  min-height:70px;
+  background:#e3f2fd;
+  margin:2px;
+  border-radius:6px;
+  cursor:pointer;
+  padding:4px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
 }
-
-table{
- width:100%;
- max-width:900px;
- margin:20px auto;
- border-collapse:collapse;
- background:#fff
+.date-number { font-weight:bold; margin-bottom:3px; }
+.staff {
+  font-size:11px;
+  color:#fff;
+  padding:2px 4px;
+  border-radius:4px;
+  margin:1px 0;
+  width:100%;
+  cursor:pointer;
 }
-
-th,td{
- border:1px solid #ccc;
- vertical-align:top;
- padding:6px;
- height:90px;
-}
-
-th{background:#e3f2fd}
-
-.staff{
- background:#1976d2;
- color:#fff;
- font-size:12px;
- padding:2px 4px;
- border-radius:4px;
- margin-top:4px;
- cursor:pointer;
- display:inline-block
-}
+.Petro { background:#2196f3; }
+.Mina { background:#4caf50; }
+.Samir { background:#9c27b0; }
+.empty { background:transparent; cursor:default; }
 </style>
 </head>
 
 <body>
-
-<h1>Shared Staff Calendar</h1>
-
-<div class="login">
- <input id="email" placeholder="Admin email"><br><br>
- <input id="password" type="password" placeholder="Password"><br><br>
- <button onclick="login()">Login</button>
- <div id="status"></div>
-</div>
+<h1>Yearly Staff Calendar</h1>
 
 <div class="controls">
- <label>Select staff</label><br>
- <select id="staff">
-  <option>Petro</option>
-  <option>Mina</option>
-  <option>Samir</option>
- </select>
+<label>Select Year</label>
+<select id="yearSelect"></select>
+
+<label>Select Staff (Add)</label>
+<select id="staffSelect" multiple>
+<option>Petro</option>
+<option>Mina</option>
+<option>Samir</option>
+</select>
+
+<button onclick="exportPDF()">Export to PDF</button>
 </div>
 
-<h2 id="title" style="text-align:center"></h2>
-
-<table id="calendar"></table>
+<div class="calendar" id="calendar"></div>
 
 <script>
-const firebaseConfig={
- apiKey:"AIzaSyB339RPIetJdCmYwZ0ZettCFAs6eMrGCzQ",
- authDomain:"calender-e1893.firebaseapp.com",
- databaseURL:"https://calender-e1893-default-rtdb.firebaseio.com",
- projectId:"calender-e1893"
+/* 🔥 FIREBASE CONFIG – REPLACE WITH YOUR OWN 🔥 */
+const firebaseConfig = {
+  apiKey: "YOUR_API_KEY",
+  authDomain: "YOUR_PROJECT.firebaseapp.com",
+  databaseURL: "https://YOUR_PROJECT.firebaseio.com",
+  projectId: "YOUR_PROJECT",
 };
 firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
 
-const db=firebase.database();
-const auth=firebase.auth();
-auth.setPersistence(firebase.auth.Auth.Persistence.SESSION);
+/* GLOBALS */
+const calendarEl = document.getElementById("calendar");
+const staffSelect = document.getElementById("staffSelect");
+const yearSelect = document.getElementById("yearSelect");
 
-let loggedIn=false;
-let data={};
+let assignments = {};
 
-const cal=document.getElementById("calendar");
-const status=document.getElementById("status");
-const title=document.getElementById("title");
+const months = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+const weekdays = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
 
-const now=new Date();
-const year=now.getFullYear();
-const month=now.getMonth();
-
-title.textContent=now.toLocaleString("default",{month:"long",year:"numeric"});
-
-function login(){
- auth.signInWithEmailAndPassword(email.value,password.value)
- .catch(e=>status.textContent=e.message);
+/* YEAR SELECT */
+const currentYear = new Date().getFullYear();
+for (let y=currentYear-5; y<=currentYear+5; y++){
+  const o=document.createElement("option");
+  o.value=y; o.textContent=y;
+  if(y===currentYear) o.selected=true;
+  yearSelect.appendChild(o);
 }
 
-auth.onAuthStateChanged(u=>{
- loggedIn=!!u;
- status.textContent=u?"Logged in":"View only";
-});
-
-db.ref("calendar/"+year).on("value",snap=>{
- data=snap.val()||{};
- render();
-});
-
-function render(){
- cal.innerHTML="";
- const days=["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
- let row=cal.insertRow();
- days.forEach(d=>row.insertCell().outerHTML="<th>"+d+"</th>");
-
- const first=(new Date(year,month,1).getDay()+6)%7;
- let r=cal.insertRow();
- for(let i=0;i<first;i++)r.insertCell();
-
- const total=new Date(year,month+1,0).getDate();
- for(let d=1;d<=total;d++){
-  if(r.cells.length===7)r=cal.insertRow();
-  const c=r.insertCell();
-  c.innerHTML="<b>"+d+"</b><br>";
-  const key=month+"-"+d;
-  const ass=data[key]||[];
-
-  ass.forEach(name=>{
-   const s=document.createElement("div");
-   s.className="staff";
-   s.textContent=name;
-   s.onclick=e=>{
-    e.stopPropagation();
-    if(loggedIn){
-     db.ref(`calendar/${year}/${key}`).set(ass.filter(n=>n!==name));
-    }
-   };
-   c.appendChild(s);
+/* REALTIME SYNC */
+function listenData(){
+  const year = yearSelect.value;
+  db.ref("calendar/"+year).on("value", snap=>{
+    assignments = snap.val() || {};
+    renderCalendar();
   });
-
-  c.onclick=()=>{
-   if(!loggedIn)return;
-   const name=staff.value;
-   if(!ass.includes(name)){
-    db.ref(`calendar/${year}/${key}`).set([...ass,name]);
-   }
-  };
- }
 }
 
-render();
+/* RENDER */
+function renderCalendar(){
+  calendarEl.innerHTML="";
+  const year=yearSelect.value;
+
+  months.forEach((month,m)=>{
+    const monthEl=document.createElement("div");
+    monthEl.className="month";
+    monthEl.innerHTML=`<h2>${month} ${year}</h2>`;
+
+    const wd=document.createElement("div");
+    wd.className="weekdays";
+    weekdays.forEach(d=>wd.innerHTML+=`<div>${d}</div>`);
+
+    const days=document.createElement("div");
+    days.className="days";
+
+    let first=new Date(year,m,1);
+    let start=(first.getDay()+6)%7;
+    for(let i=0;i<start;i++) days.innerHTML+=`<div class="empty"></div>`;
+
+    let count=new Date(year,m+1,0).getDate();
+    for(let d=1;d<=count;d++){
+      const key=`${m}-${d}`;
+      const assigned=assignments[key]||[];
+
+      const div=document.createElement("div");
+      div.className="day";
+      div.onclick=()=>addStaff(key);
+
+      div.innerHTML=`<div class="date-number">${d}</div>`;
+      assigned.forEach(name=>{
+        const s=document.createElement("div");
+        s.className=`staff ${name}`;
+        s.textContent=name;
+        s.onclick=(e)=>{ e.stopPropagation(); removeStaff(key,name); };
+        div.appendChild(s);
+      });
+
+      days.appendChild(div);
+    }
+
+    monthEl.appendChild(wd);
+    monthEl.appendChild(days);
+    calendarEl.appendChild(monthEl);
+  });
+}
+
+/* ADD STAFF */
+function addStaff(key){
+  const selected=Array.from(staffSelect.selectedOptions).map(o=>o.value);
+  if(!selected.length){ alert("Select staff to add"); return; }
+
+  const existing = assignments[key] || [];
+  const merged = Array.from(new Set([...existing, ...selected]));
+  db.ref("calendar/"+yearSelect.value+"/"+key).set(merged);
+}
+
+/* REMOVE STAFF */
+function removeStaff(key,name){
+  const updated = (assignments[key]||[]).filter(n=>n!==name);
+  db.ref("calendar/"+yearSelect.value+"/"+key).set(updated);
+}
+
+/* PDF */
+function exportPDF(){
+  html2pdf().from(calendarEl).save("staff-calendar.pdf");
+}
+
+/* EVENTS */
+yearSelect.onchange=()=>{
+  db.ref("calendar/"+yearSelect.value).off();
+  listenData();
+};
+
+/* INIT */
+listenData();
 </script>
 </body>
 </html>
