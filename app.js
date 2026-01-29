@@ -1,8 +1,10 @@
 const staff = ["Petro", "Mina", "Samir"];
 const calendarEl = document.getElementById("calendar");
 const yearSelect = document.getElementById("yearSelect");
+const staffSelect = document.getElementById("staffSelect");
 
 const today = new Date().getFullYear();
+
 for (let y = today - 2; y <= today + 5; y++) {
   yearSelect.innerHTML += `<option value="${y}">${y}</option>`;
 }
@@ -12,6 +14,7 @@ yearSelect.addEventListener("change", () => buildCalendar(yearSelect.value));
 
 function buildCalendar(year) {
   calendarEl.innerHTML = "";
+
   for (let month = 0; month < 12; month++) {
     const monthEl = document.createElement("div");
     monthEl.className = "month";
@@ -19,7 +22,9 @@ function buildCalendar(year) {
 
     const weekdays = document.createElement("div");
     weekdays.className = "weekdays";
-    ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"].forEach(d => weekdays.innerHTML += `<div>${d}</div>`);
+    ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"].forEach(d => {
+      weekdays.innerHTML += `<div>${d}</div>`;
+    });
     monthEl.appendChild(weekdays);
 
     const days = document.createElement("div");
@@ -28,14 +33,17 @@ function buildCalendar(year) {
     let firstDay = new Date(year, month, 1).getDay();
     firstDay = firstDay === 0 ? 6 : firstDay - 1;
 
-    for (let i = 0; i < firstDay; i++) days.innerHTML += `<div></div>`;
+    for (let i = 0; i < firstDay; i++) {
+      days.innerHTML += `<div></div>`;
+    }
 
     const totalDays = new Date(year, month + 1, 0).getDate();
     for (let d = 1; d <= totalDays; d++) {
       const dayEl = document.createElement("div");
       dayEl.className = "day";
       dayEl.innerHTML = `<strong>${d}</strong>`;
-      dayEl.onclick = () => assignStaff(dayEl);
+
+      dayEl.addEventListener("click", () => addStaff(dayEl));
       days.appendChild(dayEl);
     }
 
@@ -44,19 +52,24 @@ function buildCalendar(year) {
   }
 }
 
-function assignStaff(dayEl) {
-  const selected = prompt("Enter staff names separated by comma:\nPetro, Mina, Samir");
-  if (!selected) return;
+function addStaff(dayEl) {
+  const name = staffSelect.value;
 
-  dayEl.querySelectorAll(".staff-tag").forEach(e => e.remove());
-  dayEl.className = "day";
+  if ([...dayEl.querySelectorAll(".staff-tag")].some(t => t.dataset.name === name)) {
+    return;
+  }
 
-  selected.split(",").map(s => s.trim()).forEach(name => {
-    if (staff.includes(name)) {
-      dayEl.classList.add(`staff-${name}`);
-      dayEl.innerHTML += `<div class="staff-tag">${name}</div>`;
-    }
+  const tag = document.createElement("div");
+  tag.className = `staff-tag staff-${name}`;
+  tag.textContent = name;
+  tag.dataset.name = name;
+
+  tag.addEventListener("click", e => {
+    e.stopPropagation();
+    tag.remove();
   });
+
+  dayEl.appendChild(tag);
 }
 
 function exportPDF() {

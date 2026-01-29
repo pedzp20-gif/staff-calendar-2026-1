@@ -6,6 +6,7 @@ body {
 
 header {
   display: flex;
+  flex-wrap: wrap;
   gap: 10px;
   align-items: center;
   margin-bottom: 10px;
@@ -40,17 +41,20 @@ header {
 
 .day {
   border: 1px solid #eee;
-  min-height: 60px;
+  min-height: 70px;
   padding: 2px;
   cursor: pointer;
+}
+
+.staff-tag {
+  font-size: 10px;
+  padding: 2px 4px;
+  margin-top: 2px;
+  border-radius: 4px;
+  cursor: pointer;
+  display: inline-block;
 }
 
 .staff-Petro { background: #ffcccc; }
 .staff-Mina { background: #ccffcc; }
 .staff-Samir { background: #ccccff; }
-
-.staff-tag {
-  font-size: 10px;
-  padding: 2px;
-  margin-top: 2px;
-}
