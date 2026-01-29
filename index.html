@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Shared Staff Calendar</title>
+
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+
+<style>
+body{font-family:Arial;background:#f5f7fa;padding:20px}
+h1{text-align:center}
+
+.login,.controls{
+ max-width:420px;
+ margin:10px auto;
+ background:#fff;
+ padding:12px;
+ border-radius:8px
+}
+
+table{
+ width:100%;
+ max-width:900px;
+ margin:20px auto;
+ border-collapse:collapse;
+ background:#fff
+}
+
+th,td{
+ border:1px solid #ccc;
+ vertical-align:top;
+ padding:6px;
+ height:90px;
+}
+
+th{background:#e3f2fd}
+
+.staff{
+ background:#1976d2;
+ color:#fff;
+ font-size:12px;
+ padding:2px 4px;
+ border-radius:4px;
+ margin-top:4px;
+ cursor:pointer;
+ display:inline-block
+}
+</style>
+</head>
+
+<body>
+
+<h1>Shared Staff Calendar</h1>
+
+<div class="login">
+ <input id="email" placeholder="Admin email"><br><br>
+ <input id="password" type="password" placeholder="Password"><br><br>
+ <button onclick="login()">Login</button>
+ <div id="status"></div>
+</div>
+
+<div class="controls">
+ <label>Select staff</label><br>
+ <select id="staff">
+  <option>Petro</option>
+  <option>Mina</option>
+  <option>Samir</option>
+ </select>
+</div>
+
+<h2 id="title" style="text-align:center"></h2>
+
+<table id="calendar"></table>
+
+<script>
+const firebaseConfig={
+ apiKey:"AIzaSyB339RPIetJdCmYwZ0ZettCFAs6eMrGCzQ",
+ authDomain:"calender-e1893.firebaseapp.com",
+ databaseURL:"https://calender-e1893-default-rtdb.firebaseio.com",
+ projectId:"calender-e1893"
+};
+firebase.initializeApp(firebaseConfig);
+
+const db=firebase.database();
+const auth=firebase.auth();
+auth.setPersistence(firebase.auth.Auth.Persistence.SESSION);
+
+let loggedIn=false;
+let data={};
+
+const cal=document.getElementById("calendar");
+const status=document.getElementById("status");
+const title=document.getElementById("title");
+
+const now=new Date();
+const year=now.getFullYear();
+const month=now.getMonth();
+
+title.textContent=now.toLocaleString("default",{month:"long",year:"numeric"});
+
+function login(){
+ auth.signInWithEmailAndPassword(email.value,password.value)
+ .catch(e=>status.textContent=e.message);
+}
+
+auth.onAuthStateChanged(u=>{
+ loggedIn=!!u;
+ status.textContent=u?"Logged in":"View only";
+});
+
+db.ref("calendar/"+year).on("value",snap=>{
+ data=snap.val()||{};
+ render();
+});
+
+function render(){
+ cal.innerHTML="";
+ const days=["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
+ let row=cal.insertRow();
+ days.forEach(d=>row.insertCell().outerHTML="<th>"+d+"</th>");
+
+ const first=(new Date(year,month,1).getDay()+6)%7;
+ let r=cal.insertRow();
+ for(let i=0;i<first;i++)r.insertCell();
+
+ const total=new Date(year,month+1,0).getDate();
+ for(let d=1;d<=total;d++){
+  if(r.cells.length===7)r=cal.insertRow();
+  const c=r.insertCell();
+  c.innerHTML="<b>"+d+"</b><br>";
+  const key=month+"-"+d;
+  const ass=data[key]||[];
+
+  ass.forEach(name=>{
+   const s=document.createElement("div");
+   s.className="staff";
+   s.textContent=name;
+   s.onclick=e=>{
+    e.stopPropagation();
+    if(loggedIn){
+     db.ref(`calendar/${year}/${key}`).set(ass.filter(n=>n!==name));
+    }
+   };
+   c.appendChild(s);
+  });
+
+  c.onclick=()=>{
+   if(!loggedIn)return;
+   const name=staff.value;
+   if(!ass.includes(name)){
+    db.ref(`calendar/${year}/${key}`).set([...ass,name]);
+   }
+  };
+ }
+}
+
+render();
+</script>
+</body>
+</html>
