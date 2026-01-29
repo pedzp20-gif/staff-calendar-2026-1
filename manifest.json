@@ -1,6 +1,15 @@
 {
   "name": "Staff Calendar",
   "short_name": "Calendar",
-  "start_url": "./index.html",
-  "display": "standalone"
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#1976d2",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/747/747310.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
 }

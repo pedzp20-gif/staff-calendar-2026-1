@@ -1,3 +1,19 @@
-self.addEventListener("fetch", event => {
-  event.respondWith(fetch(event.request).catch(() => caches.match(event.request)));
+self.addEventListener("install", e => {
+  e.waitUntil(
+    caches.open("calendar-cache").then(cache =>
+      cache.addAll([
+        "./",
+        "./index.html",
+        "./style.css",
+        "./app.js",
+        "./manifest.json"
+      ])
+    )
+  );
+});
+
+self.addEventListener("fetch", e => {
+  e.respondWith(
+    caches.match(e.request).then(res => res || fetch(e.request))
+  );
 });

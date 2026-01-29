@@ -1,148 +1,28 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Staff Calendar</title>
-
-<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
-
-<style>
-body{
-  font-family: Arial, sans-serif;
-  background:#f2f2f2;
-  padding:20px;
-}
-h1{text-align:center}
-
-.controls{
-  max-width:400px;
-  margin:0 auto 20px auto;
-  background:#fff;
-  padding:15px;
-  border-radius:8px;
-}
-
-table{
-  width:100%;
-  max-width:900px;
-  margin:0 auto;
-  border-collapse:collapse;
-  background:#fff;
-}
-
-th,td{
-  border:1px solid #ccc;
-  padding:6px;
-  height:90px;
-  vertical-align:top;
-}
-
-th{
-  background:#e3f2fd;
-}
-
-.staff{
-  display:block;
-  background:#1976d2;
-  color:#fff;
-  padding:2px 4px;
-  border-radius:4px;
-  margin-top:4px;
-  font-size:12px;
-}
-</style>
+  <meta charset="UTF-8" />
+  <title>Staff Yearly Calendar</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
 
-<h1>Staff Calendar</h1>
+<header>
+  <h1>Staff Yearly Calendar</h1>
+  <select id="yearSelect"></select>
+  <button onclick="exportPDF()">Export PDF</button>
+</header>
 
-<div class="controls">
-  <label>Select staff:</label>
-  <select id="staff">
-    <option>Petro</option>
-    <option>Mina</option>
-    <option>Samir</option>
-  </select>
-</div>
+<div id="calendar"></div>
 
-<h2 id="title" style="text-align:center"></h2>
-
-<table id="calendar"></table>
-
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<script src="app.js"></script>
 <script>
-// 🔥 Firebase config (YOUR PROJECT)
-const firebaseConfig = {
-  apiKey: "AIzaSyB339RPIetJdCmYwZ0ZettCFAs6eMrGCzQ",
-  authDomain: "calender-e1893.firebaseapp.com",
-  databaseURL: "https://calender-e1893-default-rtdb.firebaseio.com",
-  projectId: "calender-e1893"
-};
-
-firebase.initializeApp(firebaseConfig);
-const db = firebase.database();
-
-const calendar = document.getElementById("calendar");
-const title = document.getElementById("title");
-
-const now = new Date();
-const year = now.getFullYear();
-const month = now.getMonth();
-
-title.textContent = now.toLocaleString("default",{month:"long",year:"numeric"});
-
-let data = {};
-
-// Realtime listener
-db.ref("calendar/"+year).on("value", snap => {
-  data = snap.val() || {};
-  render();
-});
-
-function render(){
-  calendar.innerHTML = "";
-
-  // Header
-  const header = calendar.insertRow();
-  ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"].forEach(d=>{
-    const th = document.createElement("th");
-    th.textContent = d;
-    header.appendChild(th);
-  });
-
-  let row = calendar.insertRow();
-  const firstDay = (new Date(year,month,1).getDay()+6)%7;
-  for(let i=0;i<firstDay;i++) row.insertCell();
-
-  const daysInMonth = new Date(year,month+1,0).getDate();
-  for(let d=1; d<=daysInMonth; d++){
-    if(row.cells.length === 7) row = calendar.insertRow();
-
-    const cell = row.insertCell();
-    cell.innerHTML = "<b>"+d+"</b>";
-
-    const key = month+"-"+d;
-    const assigned = data[key] || [];
-
-    assigned.forEach(name=>{
-      const div = document.createElement("div");
-      div.className = "staff";
-      div.textContent = name;
-      cell.appendChild(div);
-    });
-
-    cell.onclick = ()=>{
-      const name = staff.value;
-      if(!assigned.includes(name)){
-        db.ref("calendar/"+year+"/"+key).set([...assigned, name]);
-      }
-    };
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('service-worker.js');
   }
-}
-
-// Initial render so table always exists
-render();
 </script>
 
 </body>
